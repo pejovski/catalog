@@ -3,20 +3,20 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/go-retryablehttp"
-	"github.com/pejovski/catalog/gateway/reviewing"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/hashicorp/go-retryablehttp"
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/sirupsen/logrus"
 
 	"github.com/pejovski/catalog/controller"
 	amqpEmitter "github.com/pejovski/catalog/emitter/amqp"
 	"github.com/pejovski/catalog/factory"
+	"github.com/pejovski/catalog/gateway/reviewing"
 	amqpReceiver "github.com/pejovski/catalog/receiver/amqp"
 	"github.com/pejovski/catalog/repository"
 	httpServer "github.com/pejovski/catalog/server/http"
