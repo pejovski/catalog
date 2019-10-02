@@ -50,11 +50,6 @@ vm.max_map_count=524288
 ```
 to the end of /etc/sysctl.conf
 
-### Swagger
-- use http://editor.swagger.io
-- modify app/swagger/swagger.yaml
-- run: statik -src=./app/swagger -dest=./app
-
 ### Dependency 
 - Event Bus - RabbitMQ [Common](https://github.com/pejovski/common)
 - Wish List API - [Wish List](https://github.com/pejovski/wish-list)
@@ -70,11 +65,10 @@ go run main.go
 - play!
 - add new product, add wish list item, update price, update product, etc.
 
-## Usage
-
-```bash
-go run main.go
-```
+## Swagger update
+- use http://editor.swagger.io
+- modify app/swagger/swagger.yaml
+- run: statik -src=./app/swagger -dest=./app
 
 # Architecture and Design
 
