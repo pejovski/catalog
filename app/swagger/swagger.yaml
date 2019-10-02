@@ -1,0 +1,203 @@
+consumes:
+  - application/json
+produces:
+  - application/json
+swagger: '2.0'
+info:
+  description: 'Catalog'
+  title: Catalog
+  version: 1.0.0
+tags:
+  - name: "catalog"
+    description: "Catalog"
+basePath: /
+paths:
+  '/products':
+    get:
+      tags:
+        - "catalog"
+      summary: Get products
+      operationId: products-get
+      produces:
+        - "application/json"
+      parameters:
+        - name: "category"
+          in: "query"
+          description: "Category"
+          required: true
+          type: "string"
+      responses:
+        '200':
+          $ref: '#/responses/products'
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error
+    post:
+      tags:
+        - "catalog"
+      summary: Create product
+      operationId: product-post
+      parameters:
+        - name: product
+          description: product
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+              brand:
+                type: string
+              price:
+                type: number
+              category:
+                type: string
+              image:
+                type: string
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error
+  '/products/{id}':
+    get:
+      tags:
+        - "catalog"
+      summary: Get product
+      operationId: product-get
+      parameters:
+        - name: id
+          type: string
+          description: product id
+          in: path
+          required: true
+      responses:
+        '200':
+          $ref: '#/responses/product'
+        '400':
+          description: Bad Request
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+    delete:
+      tags:
+        - "catalog"
+      summary: Delete product
+      operationId: product-delete
+      parameters:
+        - name: id
+          type: string
+          description: product id
+          in: path
+          required: true
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error
+    put:
+      tags:
+        - "catalog"
+      summary: Update product
+      operationId: product-put
+      parameters:
+        - name: id
+          type: string
+          description: product id
+          in: path
+          required: true
+        - name: product
+          description: product
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+              brand:
+                type: string
+              price:
+                type: number
+              category:
+                type: string
+              image:
+                type: string
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error
+    patch:
+      tags:
+        - "catalog"
+      summary: Patch product
+      operationId: product-patch
+      parameters:
+        - name: id
+          type: string
+          description: product id
+          in: path
+          required: true
+        - name: price
+          description: price
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              price:
+                type: number
+      responses:
+        '204':
+          description: No Content
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error
+
+responses:
+  product:
+    description: Ok
+    schema:
+      $ref: '#/definitions/Product'
+  products:
+    description: Ok
+    schema:
+      type: array
+      items:
+        $ref: '#/definitions/Product'
+definitions:
+  Product:
+    type: object
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      brand:
+        type: string
+      price:
+        type: number
+      category:
+        type: string
+      image:
+        type: string
+      rating:
+        $ref: "#/definitions/Rating"
+  Rating:
+    type: object
+    properties:
+      stars:
+        type: number
+      customers:
+        type: number
