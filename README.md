@@ -55,6 +55,21 @@ to the end of /etc/sysctl.conf
 - modify app/swagger/swagger.yaml
 - run: statik -src=./app/swagger -dest=./app
 
+### Dependency 
+- Event Bus - RabbitMQ [Common](https://github.com/pejovski/common)
+- Wish List API - [Wish List](https://github.com/pejovski/wish-list)
+
+### Usage
+- Make sure the shared RabbitMQ container is up and running [Common](https://github.com/pejovski/common)
+- Make sure [Wish List API](http://localhost:8203) is active from [Wish List](https://github.com/pejovski/wish-list)
+```bash
+docker-compose up -d
+go run main.go
+```
+- open [Catalog API](http://localhost:8201)
+- play!
+- add new product, add wish list item, update price, update product, etc.
+
 ## Usage
 
 ```bash
