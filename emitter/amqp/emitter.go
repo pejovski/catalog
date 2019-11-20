@@ -15,16 +15,22 @@ const (
 	exKind = "fanout"
 )
 
-type Emitter struct {
+type Emitter interface {
+	ProductPriceUpdated(id string, price float32)
+	ProductUpdated(id string)
+	ProductDeleted(id string)
+}
+
+type emitter struct {
 	ch   *amqp.Channel
 	once sync.Once
 }
 
-func NewEmitter(ch *amqp.Channel) *Emitter {
-	return &Emitter{ch: ch}
+func NewEmitter(ch *amqp.Channel) Emitter {
+	return emitter{ch: ch}
 }
 
-func (e Emitter) ProductUpdated(id string) {
+func (e emitter) ProductUpdated(id string) {
 	e.once.Do(e.declareExchange(exProductUpdated))
 
 	msg := struct {
@@ -54,7 +60,7 @@ func (e Emitter) ProductUpdated(id string) {
 	logrus.Infof("ProductUpdated event for product %s sent. Body: %s", id, string(b))
 }
 
-func (e Emitter) ProductDeleted(id string) {
+func (e emitter) ProductDeleted(id string) {
 	e.once.Do(e.declareExchange(exProductDeleted))
 
 	msg := struct {
@@ -84,7 +90,7 @@ func (e Emitter) ProductDeleted(id string) {
 	logrus.Infof("ProductDeleted event for product %s sent. Body: %s", id, string(b))
 }
 
-func (e Emitter) ProductPriceUpdated(id string, price float32) {
+func (e emitter) ProductPriceUpdated(id string, price float32) {
 	e.once.Do(e.declareExchange(exProductPriceUpdated))
 
 	msg := struct {
@@ -115,7 +121,7 @@ func (e Emitter) ProductPriceUpdated(id string, price float32) {
 	logrus.Infof("ProductPriceUpdated event for product %s sent. Body: %s", id, string(b))
 }
 
-func (e Emitter) declareExchange(ex string) func() {
+func (e emitter) declareExchange(ex string) func() {
 	return func() {
 		err := e.ch.ExchangeDeclare(
 			ex,

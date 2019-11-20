@@ -1,4 +1,4 @@
-package http
+package api
 
 type Product struct {
 	Id       string  `json:"id"`

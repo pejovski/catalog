@@ -1,9 +1,11 @@
 package reviewing
 
-import "github.com/pejovski/catalog/domain"
+import (
+	"github.com/pejovski/catalog/model"
+)
 
-func (g Gateway) mapRatingToDomainRating(r Rating) *domain.Rating {
-	return &domain.Rating{
+func (g gateway) mapRatingToDomainRating(r Rating) *model.Rating {
+	return &model.Rating{
 		Stars:     r.Stars,
 		Customers: r.Customers,
 	}

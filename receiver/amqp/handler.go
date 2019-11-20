@@ -2,7 +2,7 @@ package amqp
 
 import (
 	"encoding/json"
-	"github.com/pejovski/catalog/domain"
+	"github.com/pejovski/catalog/controller"
 	"github.com/sirupsen/logrus"
 	"github.com/streadway/amqp"
 	"time"
@@ -10,17 +10,21 @@ import (
 
 const rejectSleepTime = 5 * time.Second
 
-type Handler struct {
-	controller domain.CatalogController
+type Handler interface {
+	RatingUpdated(d *amqp.Delivery)
 }
 
-func NewHandler(c domain.CatalogController) *Handler {
-	return &Handler{
+type handler struct {
+	controller controller.Controller
+}
+
+func NewHandler(c controller.Controller) Handler {
+	return handler{
 		controller: c,
 	}
 }
 
-func (h Handler) RatingUpdated(d *amqp.Delivery) {
+func (h handler) RatingUpdated(d *amqp.Delivery) {
 
 	msq := struct {
 		ProductId string `json:"product_id"`
@@ -43,14 +47,14 @@ func (h Handler) RatingUpdated(d *amqp.Delivery) {
 	h.ack(d)
 }
 
-func (h Handler) reject(d *amqp.Delivery) {
+func (h handler) reject(d *amqp.Delivery) {
 	time.Sleep(rejectSleepTime)
 	if err := d.Reject(true); err != nil {
 		logrus.Errorln("Failed to reject msg", err)
 	}
 }
 
-func (h Handler) ack(d *amqp.Delivery) {
+func (h handler) ack(d *amqp.Delivery) {
 	if err := d.Ack(false); err != nil {
 		logrus.Errorln("Failed to ack msg", err)
 	}

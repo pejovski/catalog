@@ -1,25 +1,40 @@
-package http
+package api
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/pejovski/catalog/domain"
-	"github.com/sirupsen/logrus"
 	"net/http"
+
+	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
+
+	"github.com/pejovski/catalog/controller"
+	myerr "github.com/pejovski/catalog/error"
+	"github.com/pejovski/catalog/model"
 )
 
-type Handler struct {
-	controller domain.CatalogController
+type Handler interface {
+	Products() http.HandlerFunc
+	Product() http.HandlerFunc
+	CreateProduct() http.HandlerFunc
+	UpdateProduct() http.HandlerFunc
+	UpdateProductPrice() http.HandlerFunc
+	DeleteProduct() http.HandlerFunc
 }
 
-func NewHandler(c domain.CatalogController) *Handler {
-	return &Handler{
+type handler struct {
+	controller controller.Controller
+	mapper     Mapper
+}
+
+func newHandler(c controller.Controller) Handler {
+	return handler{
 		controller: c,
+		mapper:     newMapper(),
 	}
 }
 
-func (h Handler) Products() http.HandlerFunc {
+func (h handler) Products() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		category := r.FormValue("category")
 		if category == "" {
@@ -35,11 +50,11 @@ func (h Handler) Products() http.HandlerFunc {
 			return
 		}
 
-		h.respond(w, r, mapDomainProductsToProducts(dps), http.StatusOK)
+		h.respond(w, r, h.mapper.mapDomainProductsToProducts(dps), http.StatusOK)
 	}
 }
 
-func (h Handler) Product() http.HandlerFunc {
+func (h handler) Product() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		params := mux.Vars(r)
 
@@ -52,7 +67,7 @@ func (h Handler) Product() http.HandlerFunc {
 
 		p, err := h.controller.GetProduct(id)
 		if err != nil {
-			if err == domain.ErrNotFound {
+			if err == myerr.ErrNotFound {
 				http.Error(w, "Product not found", http.StatusNotFound)
 				return
 			}
@@ -61,14 +76,14 @@ func (h Handler) Product() http.HandlerFunc {
 			return
 		}
 
-		h.respond(w, r, mapDomainProductToProduct(p), http.StatusOK)
+		h.respond(w, r, h.mapper.mapDomainProductToProduct(p), http.StatusOK)
 	}
 }
 
-func (h Handler) CreateProduct() http.HandlerFunc {
+func (h handler) CreateProduct() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		var p *domain.Product
+		var p *model.Product
 		if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
 			logrus.Warnln("Failed to decode request body")
 			http.Error(w, "Bad request", http.StatusBadRequest)
@@ -87,10 +102,10 @@ func (h Handler) CreateProduct() http.HandlerFunc {
 	}
 }
 
-func (h Handler) UpdateProduct() http.HandlerFunc {
+func (h handler) UpdateProduct() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		var p *domain.Product
+		var p *model.Product
 		if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
 			logrus.Warnln("Failed to decode request body")
 			http.Error(w, "Bad request", http.StatusBadRequest)
@@ -117,7 +132,7 @@ func (h Handler) UpdateProduct() http.HandlerFunc {
 	}
 }
 
-func (h Handler) UpdateProductPrice() http.HandlerFunc {
+func (h handler) UpdateProductPrice() http.HandlerFunc {
 
 	var request struct {
 		Price float32 `json:"price"`
@@ -148,7 +163,7 @@ func (h Handler) UpdateProductPrice() http.HandlerFunc {
 	}
 }
 
-func (h Handler) DeleteProduct() http.HandlerFunc {
+func (h handler) DeleteProduct() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		params := mux.Vars(r)
@@ -169,7 +184,7 @@ func (h Handler) DeleteProduct() http.HandlerFunc {
 	}
 }
 
-func (h Handler) respond(w http.ResponseWriter, r *http.Request, data interface{}, status int) {
+func (h handler) respond(w http.ResponseWriter, r *http.Request, data interface{}, status int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 
@@ -183,6 +198,6 @@ func (h Handler) respond(w http.ResponseWriter, r *http.Request, data interface{
 	}
 }
 
-func (h Handler) decode(w http.ResponseWriter, r *http.Request, v interface{}) error {
+func (h handler) decode(w http.ResponseWriter, r *http.Request, v interface{}) error {
 	return json.NewDecoder(r.Body).Decode(v)
 }

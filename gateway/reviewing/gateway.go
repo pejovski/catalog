@@ -3,19 +3,23 @@ package reviewing
 import (
 	"errors"
 	"github.com/hashicorp/go-retryablehttp"
-	"github.com/pejovski/catalog/domain"
+	"github.com/pejovski/catalog/model"
 )
 
-type Gateway struct {
+type Gateway interface {
+	Rating(productId string) (*model.Rating, error)
+}
+
+type gateway struct {
 	client *retryablehttp.Client
 	host   string
 }
 
 func NewGateway(c *retryablehttp.Client, host string) Gateway {
-	return Gateway{client: c, host: host}
+	return gateway{client: c, host: host}
 }
 
-func (g Gateway) Rating(productId string) (*domain.Rating, error) {
+func (g gateway) Rating(productId string) (*model.Rating, error) {
 
 	// ToDo
 	return nil, errors.New("method not implemented yet")

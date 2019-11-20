@@ -1,21 +1,34 @@
 package controller
 
 import (
-	"github.com/pejovski/catalog/domain"
+	emitter "github.com/pejovski/catalog/emitter/amqp"
+	"github.com/pejovski/catalog/gateway/reviewing"
+	"github.com/pejovski/catalog/model"
+	"github.com/pejovski/catalog/repository"
 	"github.com/sirupsen/logrus"
 )
 
-type Catalog struct {
-	repository domain.CatalogRepository
-	emitter    domain.AmqpEmitter
-	reviewing  domain.ReviewingGateway
+type Controller interface {
+	GetProduct(id string) (*model.Product, error)
+	GetProducts(category string) ([]*model.Product, error)
+	CreateProduct(p *model.Product) (id string, err error)
+	UpdateProduct(p *model.Product) error
+	DeleteProduct(id string) error
+	UpdateProductPrice(id string, price float32) error
+	UpdateRating(id string) error
 }
 
-func NewCatalog(r domain.CatalogRepository, e domain.AmqpEmitter, rev domain.ReviewingGateway) Catalog {
-	return Catalog{repository: r, emitter: e, reviewing: rev}
+type controller struct {
+	repository repository.Repository
+	emitter    emitter.Emitter
+	reviewing  reviewing.Gateway
 }
 
-func (c Catalog) GetProduct(id string) (*domain.Product, error) {
+func New(r repository.Repository, e emitter.Emitter, rev reviewing.Gateway) Controller {
+	return controller{repository: r, emitter: e, reviewing: rev}
+}
+
+func (c controller) GetProduct(id string) (*model.Product, error) {
 	p, err := c.repository.Get(id)
 	if err != nil {
 		logrus.Errorf("Failed to get product %s; Error: %s", id, err)
@@ -25,7 +38,7 @@ func (c Catalog) GetProduct(id string) (*domain.Product, error) {
 	return p, nil
 }
 
-func (c Catalog) GetProducts(category string) ([]*domain.Product, error) {
+func (c controller) GetProducts(category string) ([]*model.Product, error) {
 	ps, err := c.repository.GetByCategory(category)
 	if err != nil {
 		logrus.Errorf("Failed to get products for category %s; Error: %s", category, err)
@@ -35,11 +48,11 @@ func (c Catalog) GetProducts(category string) ([]*domain.Product, error) {
 	return ps, nil
 }
 
-func (c Catalog) CreateProduct(p *domain.Product) (id string, err error) {
+func (c controller) CreateProduct(p *model.Product) (id string, err error) {
 	return c.repository.Create(p)
 }
 
-func (c Catalog) UpdateProduct(p *domain.Product) (err error) {
+func (c controller) UpdateProduct(p *model.Product) (err error) {
 	err = c.repository.Update(p)
 	if err != nil {
 		logrus.Errorf("Failed to update product %s; Error: %s", p.Id, err)
@@ -51,7 +64,7 @@ func (c Catalog) UpdateProduct(p *domain.Product) (err error) {
 	return err
 }
 
-func (c Catalog) UpdateProductPrice(id string, price float32) (err error) {
+func (c controller) UpdateProductPrice(id string, price float32) (err error) {
 	err = c.repository.UpdatePrice(id, price)
 	if err != nil {
 		logrus.Errorf("Failed to update price of product %s; Error: %s", id, err)
@@ -63,7 +76,7 @@ func (c Catalog) UpdateProductPrice(id string, price float32) (err error) {
 	return err
 }
 
-func (c Catalog) DeleteProduct(id string) (err error) {
+func (c controller) DeleteProduct(id string) (err error) {
 	err = c.repository.Delete(id)
 	if err != nil {
 		logrus.Errorf("Failed to delete product %s; Error: %s", id, err)
@@ -75,7 +88,7 @@ func (c Catalog) DeleteProduct(id string) (err error) {
 	return
 }
 
-func (c Catalog) UpdateRating(id string) error {
+func (c controller) UpdateRating(id string) error {
 	rating, err := c.reviewing.Rating(id)
 	if err != nil {
 		logrus.Errorf("Failed to get rating for product %s, Error: %s", id, err)

@@ -1,12 +1,11 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"net/http"
+	"github.com/pejovski/catalog/pkg/signals"
+	"github.com/pejovski/catalog/repository/es"
+	"github.com/pejovski/catalog/server/api"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/hashicorp/go-retryablehttp"
@@ -18,12 +17,10 @@ import (
 	"github.com/pejovski/catalog/factory"
 	"github.com/pejovski/catalog/gateway/reviewing"
 	amqpReceiver "github.com/pejovski/catalog/receiver/amqp"
-	"github.com/pejovski/catalog/repository"
-	httpServer "github.com/pejovski/catalog/server/http"
 )
 
 const (
-	serverShutdownTimeout = 3 * time.Second
+	shutdownDuration = 3 * time.Second
 )
 
 func main() {
@@ -42,43 +39,21 @@ func main() {
 	))
 
 	emitter := amqpEmitter.NewEmitter(amqpCh)
-	catalogRepository := repository.NewESProductRepository(esClient)
+	catalogRepository := es.NewRepository(esClient)
 	reviewingGateway := reviewing.NewGateway(retryablehttp.NewClient(), os.Getenv("REVIEWING_API_HOST"))
 
-	catalogController := controller.NewCatalog(catalogRepository, emitter, reviewingGateway)
+	catalogController := controller.New(catalogRepository, emitter, reviewingGateway)
 
 	amqpHandler := amqpReceiver.NewHandler(catalogController)
 	receiver := amqpReceiver.NewReceiver(amqpCh, amqpHandler)
 	// receive messages in goroutines
 	receiver.Receive()
 
-	serverHandler := httpServer.NewHandler(catalogController)
-	serverRouter := httpServer.NewRouter(serverHandler)
+	ctx := signals.Context()
 
-	server := factory.CreateHttpServer(serverRouter, fmt.Sprintf(":%s", os.Getenv("APP_PORT")))
-	go func() {
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logrus.Fatalf(err.Error())
-		}
-	}()
-	logrus.Infof("Server started at port: %s", os.Getenv("APP_PORT"))
+	serverAPI := api.NewServer(catalogController)
+	serverAPI.Run(ctx)
 
-	gracefulShutdown(server)
-}
-
-func gracefulShutdown(server *http.Server) {
-	// Create channel for shutdown signals.
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, os.Kill, syscall.SIGTERM)
-
-	// Receive shutdown signals.
-	<-stop
-
-	ctx, cancel := context.WithTimeout(context.Background(), serverShutdownTimeout)
-	defer cancel()
-
-	if err := server.Shutdown(ctx); err != nil {
-		logrus.Errorln("Server shutdown failed", err)
-	}
-	logrus.Println("Server exited properly")
+	logrus.Infof("allowing %s for graceful shutdown to complete", shutdownDuration)
+	<-time.After(shutdownDuration)
 }
